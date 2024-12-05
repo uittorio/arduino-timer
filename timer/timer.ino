@@ -1,11 +1,12 @@
 #include <Arduino.h>
 #include <TM1637Display.h>
-#include <PinButton.h>
 
 // Module connection pins (Digital Pins)
 #define CLK 2
 #define DIO 3
 #define BUTTON 12
+
+const int buttonPin = 12;
 
 int selectedCountDown = 300;
 boolean running = false;
@@ -13,9 +14,10 @@ boolean settings = false;
 long amountOfMillisecondsPlayed = 0;
 long previousMillisecondsForRunning = 0;
 long previousMillisecondsForSettings = 0;
+long previousMillisecondsForButtonPress = 0;
 int currentBrightness = 2;
-
-PinButton button(BUTTON);
+bool buttonPressed = false;
+long buttonPressedTime = 0;
 
 TM1637Display display(CLK, DIO);
 
@@ -31,33 +33,59 @@ void setup()
 
 void loop()
 {
-  button.update();
+  updateButtonStateAndTime();
 
   if (settings) {
     updateDisplayBrightness();
 
-    if (button.isLongClick()) {
-      disableSettings();     
-    }
-
-    if (button.isSingleClick()) {
+    if (isButtonPressedAndReleasedAfter(1000)) {
+      disableSettings();
+    } else if (isButtonPressedAndReleasedAfter(0)) {
       changeCountDown();
     }
+
   } else {
-    if (button.isLongClick()) {
+
+    if (isButtonPressedAndReleasedAfter(4000)) {
       enableSettings();
-    }
-
-    if (button.isDoubleClick()) {
+    } else if (isButtonPressedAndReleasedAfter(1000)) {      
       resetTimer();
-    }
-
-    if (button.isSingleClick()) {
+    } else if (isButtonPressedAndReleasedAfter(0)) {
       pauseOrResumeTimer();
     }
   }
 
   updateTimer();
+
+  delay(20);
+}
+
+void updateButtonStateAndTime() {
+  int buttonState = digitalRead(buttonPin);
+  if (buttonState == 0 && !buttonPressed) {
+    buttonPressedTime = millis();
+    buttonPressed = true;
+  }
+}
+
+bool isButtonPressedAndReleased() {
+  int buttonState = digitalRead(buttonPin);
+  if (buttonPressed && buttonState == 1) {
+    return true;
+  }
+
+  return false;
+}
+
+
+bool isButtonPressedAndReleasedAfter(long milliseconds) {
+  if (isButtonPressedAndReleased() && millis() - buttonPressedTime >= milliseconds)  {
+    buttonPressed = false;
+    buttonPressedTime = 0;
+    return true;
+  }
+
+  return false;
 }
 
 void updateDisplayBrightness() {
@@ -78,7 +106,7 @@ void displayDigits(int digits) {
 
 void displayEnd() {
   Serial.print("end");
-  unsigned char event[4] = {0x71, 0x06, 0x54, 0x79};  
+  unsigned char event[4] = {0x71, 0x06, 0x54, 0x79};
   display.setSegments(event);
 }
 
@@ -137,9 +165,9 @@ void updateTimer() {
       displayEnd();
     } else {
       unsigned long secondsLeftToPlay = millisecondsLefToPlay / 1000;
-      updateDigitsOnTimer(ceil(secondsLeftToPlay));  
+      updateDigitsOnTimer(ceil(secondsLeftToPlay));
     }
-    
+
   } else {
     previousMillisecondsForRunning = millis();
   }
