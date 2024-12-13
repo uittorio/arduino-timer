@@ -13,7 +13,7 @@ boolean running = false;
 boolean settings = false;
 long amountOfMillisecondsPlayed = 0;
 long previousMillisecondsForRunning = 0;
-long previousMillisecondsForSettings = 0;
+long previousMillisecondsForTogglingBrightness = 0;
 long previousMillisecondsForButtonPress = 0;
 int currentBrightness = 2;
 bool buttonPressed = false;
@@ -36,7 +36,8 @@ void loop()
   updateButtonStateAndTime();
 
   if (settings) {
-    updateDisplayBrightness();
+    toggleBrightness(500, 1, 3);
+    updateDigitsOnTimer(selectedCountDown);
 
     if (isButtonPressedAndReleasedAfter(1000)) {
       disableSettings();
@@ -48,14 +49,14 @@ void loop()
 
     if (isButtonPressedAndReleasedAfter(4000)) {
       enableSettings();
-    } else if (isButtonPressedAndReleasedAfter(1000)) {      
+    } else if (isButtonPressedAndReleasedAfter(1000)) {
       resetTimer();
     } else if (isButtonPressedAndReleasedAfter(0)) {
       pauseOrResumeTimer();
     }
-  }
 
-  updateTimer();
+    updateTimer();
+  }
 
   delay(20);
 }
@@ -70,11 +71,7 @@ void updateButtonStateAndTime() {
 
 bool isButtonPressedAndReleased() {
   int buttonState = digitalRead(buttonPin);
-  if (buttonPressed && buttonState == 1) {
-    return true;
-  }
-
-  return false;
+  return buttonPressed && buttonState == 1;
 }
 
 
@@ -88,14 +85,13 @@ bool isButtonPressedAndReleasedAfter(long milliseconds) {
   return false;
 }
 
-void updateDisplayBrightness() {
+void toggleBrightness(long toggleFrequency, int lowBrightness, int highBrightness) {
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillisecondsForSettings >= 500) {
-    previousMillisecondsForSettings = currentMillis;
-    currentBrightness = (currentBrightness == 2) ? 1 : 2;
+  if (currentMillis - previousMillisecondsForTogglingBrightness >= toggleFrequency) {
+    previousMillisecondsForTogglingBrightness = currentMillis;
+    currentBrightness = (currentBrightness == highBrightness) ? lowBrightness : highBrightness;
     display.setBrightness(currentBrightness);
-    updateDigitsOnTimer(selectedCountDown);
   }
 }
 
@@ -105,7 +101,7 @@ void displayDigits(int digits) {
 }
 
 void displayEnd() {
-  Serial.print("end");
+  toggleBrightness(500, 1, 4);
   unsigned char event[4] = {0x71, 0x06, 0x54, 0x79};
   display.setSegments(event);
 }
@@ -164,6 +160,7 @@ void updateTimer() {
     if (amountOfMillisecondsPlayed > selectedCountDownInMilliseconds) {
       displayEnd();
     } else {
+      display.setBrightness(2);
       unsigned long secondsLeftToPlay = millisecondsLefToPlay / 1000;
       updateDigitsOnTimer(ceil(secondsLeftToPlay));
     }
