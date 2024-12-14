@@ -140,11 +140,17 @@ void resetTimer() {
 }
 
 void changeCountDown() {
-  if (selectedCountDown == 1800) {
-    selectedCountDown = 300;
+  if (selectedCountDown == 300) {
+    selectedCountDown = 600;
+    updateDigitsOnTimer(selectedCountDown);
+  } else if(selectedCountDown == 600) {
+    selectedCountDown = 1200;
+    updateDigitsOnTimer(selectedCountDown);
+  } else if(selectedCountDown == 1200) {
+    selectedCountDown = 1800;
     updateDigitsOnTimer(selectedCountDown);
   } else {
-    selectedCountDown = 1800;
+    selectedCountDown = 300;
     updateDigitsOnTimer(selectedCountDown);
   }
 }
